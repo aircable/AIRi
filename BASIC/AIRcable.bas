@@ -22,8 +22,6 @@
 13 R = 1
 14 IF $5[0] <> 0 THEN 16
 15 R = 0
-
-
 16 $0="AIRi v"
 17 PRINTV $2
 18 A = getuniq $3
@@ -59,12 +57,10 @@
 0 REM allow only 3-DH5
 44 A = edr 2
 0 REM mode 1, QVGA
-45 A = camera 1
-46 C = link 9
+0 REM 45 A = camera 1
+0 REM 46 C = link 9
 47 ALARM 1
 48 RETURN
-
-
 
 
 @IDLE 60
@@ -94,7 +90,6 @@
 112 W = 1;
 113 ALARM 3
 114 RETURN
-
 
 0 REM this is "take one picture to SD"
 0 REM button press disconnects slave, just in case we have one
@@ -219,20 +214,25 @@
 
 0 REM this is command line protocol 
 0 REM $<LETTER><VALUE><newline>
-400 TIMEOUTS 5
-401 INPUTS $0
-402 A = status
+400 A = pioclr 20;
+401 A = delayms 100;
+402 A = pioset 20;
+403 $0[0] = 0;
+404 TIMEOUTS 5
+405 INPUTS $0
+406 A = status;
 0 REM lost slave connection, back to slave
-403 IF A <> 1 THEN 300
-
-404 IF $0[0]<>36 THEN 400;
-405 IF $0[1]=83 THEN 420;
-406 IF $0[1]=70 THEN 430;
-407 IF $0[1]=80 THEN 440;
-408 IF $0[1]=69 THEN 450;
-409 IF $0[1]=68 THEN 460;
-410 ALARM 1
-411 RETURN
+407 IF A <> 1 THEN 300;
+408 IF $0[0]<>36 THEN 400;
+409 IF $0[1]=83 THEN 420;
+410 IF $0[1]=70 THEN 430;
+411 IF $0[1]=80 THEN 440;
+412 IF $0[1]=69 THEN 450;
+413 IF $0[1]=68 THEN 460;
+414 IF $0[1]=76 THEN 470;
+415 IF $0[1]=84 THEN 480;
+418 ALARM 1
+419 RETURN
 
 0 REM set size
 420 B = atoi $0[2];
@@ -241,14 +241,9 @@
 423 RETURN
 
 0 REM set flash
-430 IF $0[2]=49 THEN 434;
-431 A = camflash 0
-432 ALARM 1
-433 RETURN
-
-434 A = camflash 1
-435 ALARM 1
-436 RETURN
+430 A = camflash $0[2]-48
+431 ALARM 1
+432 RETURN
 
 0 REM do PAN
 440 A = campan $0[2]
@@ -266,4 +261,38 @@
 461 ALARM 1
 462 RETURN
 
-500 END
+0 REM link enable/disable
+470 IF $0[2] = 49 THEN 475;
+471 A = unlink 9;
+472 ALARM 1
+473 RETURN
+
+475 A = link 9;
+476 ALARM 1
+477 RETURN
+
+0 REM take picture
+480 PRINTS"TAKING 
+481 $479 = $0[2]
+482 $0[0] = 0
+483 PRINTV $479
+484 PRINTS $479
+485 A = open $479
+
+0 REM wait for a picture
+490 A = camcopy
+491 IF A <> 0 THEN 495
+492 WAIT 1
+493 GOTO 490
+
+0 REM get picture from FIFO into target
+495 A = camcopy;
+496 IF A > 0 THEN 495;
+
+0 REM close file, get file name in $0
+497 A = close $0
+498 PRINTS $0
+499 ALARM 1
+500 RETURN
+
+600 END
